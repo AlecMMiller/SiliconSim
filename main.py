@@ -11,7 +11,8 @@ def iterator():
 
 
 def update_screen():
-    acceleration_output.update()
+    for output in OutputStructure.registry:
+        output.update()
 
 
 root1 = Tk()

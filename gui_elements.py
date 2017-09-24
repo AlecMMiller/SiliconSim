@@ -34,7 +34,10 @@ class InputStructure:
 
 
 class OutputStructure:
+    registry = []
+
     def __init__(self, label, units, root, master, offset):
+        self.registry.append(self)
         self.offset = offset
         self.root = root
         self.panel = master
