@@ -77,7 +77,7 @@ def update_screen():
         print "zero division occurred"
 
 
-mbutton = Button(panel, text='Update', command=update_screen).grid(columnspan=3)
+mbutton = Button(panel, text='Update', command=update_screen).grid(columnspan=4)
 
 update_screen()
 
