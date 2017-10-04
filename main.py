@@ -1,5 +1,6 @@
 from Tkinter import *
 from gui_elements import InputStructure, OutputStructure
+from math import log10
 
 mobility = 0.06
 kSilicon = 11.8
@@ -71,8 +72,51 @@ def update_screen():
         poly_sheet.set_hybrid(poly_sheet.get_input()/kVal)
         sd_sheet.set_hybrid(sd_sheet.get_input()/kVal)
         metal_sheet.set_hybrid(metal_sheet.get_input()/kVal)
-        supply_voltage.set_hybrid(supply_voltage.get_input()*kVal)
+        supply_voltage.set_hybrid(supply_voltage.get_input()*gVal)
         ref_power.set_hybrid(ref_power.get_input()*gVal**3/kVal)
+
+        gate_capacitance.set_reference(1000000000*kOxide*0.0000000000089*(cdl.get_input()*0.000001)**2/(ox_thick.get_input()*0.000000001))
+        gate_leakage.set_reference(datum*10**(1.5-ox_thick.get_input()))
+        transistor_gain.set_reference(1000*kOxide*0.0000000000089*mobility/(ox_thick.get_input()*0.000000001))
+
+        poly_rc.set_reference(trackMultiplier*gate_capacitance.get_reference()*poly_sheet.get_input()/1000)
+        metal_rc.set_reference(gate_capacitance.get_reference()*metal_sheet.get_input()*trackMultiplier)
+
+        thresh.set_reference(supply_voltage.get_input()/4)
+        max_idsat.set_reference(0.5*transistor_gain.get_reference()*(supply_voltage.get_input()-thresh.get_reference())**2)
+        depletion_width.set_reference(cdl.get_input()*depLayer/100)
+        channel_doping_m.set_reference(kSilicon*0.0000000000089*(supply_voltage.get_input()+0.025)/(1.6*10**-19*(depletion_width.get_reference()*0.000000001)**2))
+        channel_doping_cm.set_reference(channel_doping_m.get_reference()*0.000001)
+        max_lateral.set_reference(1000*(supply_voltage.get_input()-thresh.get_reference())/depletion_width.get_reference())
+        max_oxide.set_reference(1000*supply_voltage.get_input()/ox_thick.get_input())
+        sd_transit.set_reference(0.000001*cdl.get_input()**2/(supply_voltage.get_input()*mobility))
+        on_resistance.set_reference(1/(transistor_gain.get_reference()*(supply_voltage.get_input()-thresh.get_reference())))
+        well_breakdown.set_reference(breakdownCo*log10(channel_doping_m.get_reference())**breakdownIndex)
+        max_current.set_reference(1000*max_idsat.get_reference()/cdl.get_input())
+        power_density.set_reference(0.000001*ref_power.get_input()*0.000001/(cdl.get_input()*0.000000001)**2)
+
+        # Hybrids
+
+        gate_capacitance.set_hybrid(gate_capacitance.get_reference()*kVal)
+        gate_leakage.set_hybrid(gate_leakage.get_reference()*10**(5*(ox_thick.get_input()-ox_thick.get_hybrid())))
+        transistor_gain.set_hybrid(transistor_gain.get_reference() / kVal)
+
+        poly_rc.set_hybrid(trackMultiplier*gate_capacitance.get_hybrid()*poly_sheet.get_hybrid()/1000)
+        metal_rc.set_hybrid(gate_capacitance.get_hybrid()*metal_sheet.get_hybrid()*trackMultiplier)
+
+        thresh.set_hybrid(thresh.get_reference()*gVal)
+        h_volt_diff = supply_voltage.get_hybrid() - thresh.get_hybrid()
+        max_idsat.set_hybrid(0.5*transistor_gain.get_hybrid()*h_volt_diff**2)
+        depletion_width.set_hybrid(cdl.get_hybrid()*depLayer/100)
+        channel_doping_m.set_hybrid(kSilicon * 0.0000000000089 * (supply_voltage.get_hybrid() + 0.025) / (1.6 * 10 ** -19 * (depletion_width.get_hybrid() * 0.000000001) ** 2))
+        channel_doping_cm.set_hybrid(channel_doping_m.get_hybrid() * 0.000001)
+        max_lateral.set_hybrid(1000 * (supply_voltage.get_hybrid() - thresh.get_hybrid()) / depletion_width.get_hybrid())
+        max_oxide.set_hybrid(1000 * supply_voltage.get_hybrid() / ox_thick.get_hybrid())
+        sd_transit.set_hybrid(0.000001 * cdl.get_hybrid() ** 2 / (supply_voltage.get_hybrid() * mobility))
+        on_resistance.set_hybrid(1 / (transistor_gain.get_hybrid() * (supply_voltage.get_hybrid() - thresh.get_hybrid())))
+        well_breakdown.set_hybrid(breakdownCo * log10(channel_doping_m.get_hybrid()) ** breakdownIndex)
+        max_current.set_hybrid(1000 * max_idsat.get_hybrid() / cdl.get_hybrid())
+        power_density.set_hybrid(0.000001 * ref_power.get_hybrid() * 0.000001 / (cdl.get_hybrid() * 0.000000001) ** 2)
     except ZeroDivisionError:
         print "zero division occurred"
 
