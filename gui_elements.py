@@ -67,14 +67,17 @@ class OutputStructure:
         Label(self.panel, text=units).grid(row=offset, column=3)
 
     def set_reference(self, reference_val):
-        self.referenceLabelVar.set(reference_val)
+        self.referenceLabelVar.set("{:.2E}".format(Decimal(reference_val)))
         self.referenceVar = reference_val
+
+    def get_reference(self):
+        return self.referenceVar
 
     def get_hybrid(self):
         return self.hybridVar
 
     def set_hybrid(self, hybrid_val):
-        self.hybridLabelVar.set(hybrid_val)
+        self.hybridLabelVar.set("{:.2E}".format(Decimal(hybrid_val)))
         self.hybridVar = hybrid_val
 
     def get_hybrid(self):
