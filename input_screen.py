@@ -1,6 +1,7 @@
 from Tkinter import *
 from gui_elements import InputStructure, OutputStructure
 from math import log10
+import animation
 
 iteratorVal = 0
 
@@ -129,5 +130,7 @@ class Input:
         Button(self.panel, text='Update', command=self.update_screen).grid(columnspan=4)
 
         self.update_screen()
+
+        animation.enable()
 
         self.root1.mainloop()
