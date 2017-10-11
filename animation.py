@@ -1,6 +1,7 @@
 import pygame
 import threading
 import interlock
+from input_screen import input_screen
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -62,8 +63,12 @@ def frame_run():
             if event.type == pygame.QUIT:
                 interlock.animation_ready = False
         screen.fill(WHITE)
-
+        with interlock.thread_lock:
+            local_input = input_screen
         rect.draw()
+        ox_thickness = int(local_input.ox_thick.get_input())
+        rect2.set_thickness(ox_thickness)
+
         rect2.update()
         rect2.draw()
 

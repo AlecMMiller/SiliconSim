@@ -136,7 +136,8 @@ class Input:
 
         while interlock.animation_ready:
             try:
-                self.root1.update()
+                with interlock.thread_lock:
+                    self.root1.update()
             except TclError:
                 interlock.animation_ready = False
                 pass
