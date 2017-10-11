@@ -1,7 +1,6 @@
-from input_screen import Input
+import input_screen
 import animation
 
-input_screen = Input()
 animation.start()
 input_screen.start()
 animation.stop()

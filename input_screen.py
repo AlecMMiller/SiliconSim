@@ -1,7 +1,8 @@
 from Tkinter import *
 from gui_elements import InputStructure, OutputStructure
 from math import log10
-import animation
+import interlock
+import threading
 
 iteratorVal = 0
 
@@ -125,12 +126,36 @@ class Input:
         except ZeroDivisionError:
             print "zero division occurred"
 
-    def start(self):
+    def run(self):
 
         Button(self.panel, text='Update', command=self.update_screen).grid(columnspan=4)
 
         self.update_screen()
 
-        animation.enable()
+        interlock.animation_ready = True
 
-        self.root1.mainloop()
+        while interlock.animation_ready:
+            try:
+                self.root1.update()
+            except TclError:
+                interlock.animation_ready = False
+                pass
+
+
+input_screen = Input()
+
+
+class UpdateThread(threading.Thread):
+    def __init__(self, threadID):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+
+    def run(self):
+        input_screen.run()
+
+
+input_thread = UpdateThread(2)
+
+
+def start():
+    input_thread.start()
