@@ -1,5 +1,5 @@
 import threading
 
-animation_ready = False
+running = False
 
 thread_lock = threading.Lock()

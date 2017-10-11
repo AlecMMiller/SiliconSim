@@ -132,14 +132,14 @@ class Input:
 
         self.update_screen()
 
-        interlock.animation_ready = True
+        interlock.running = True
 
-        while interlock.animation_ready:
+        while interlock.running:
             try:
                 with interlock.thread_lock:
                     self.root1.update()
             except TclError:
-                interlock.animation_ready = False
+                interlock.running = False
                 pass
 
 
