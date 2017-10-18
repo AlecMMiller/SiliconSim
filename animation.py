@@ -3,6 +3,7 @@ import threading
 import interlock
 from input_screen import input_screen
 import time
+import random
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -53,9 +54,10 @@ electron_list = []
 
 
 class Electron:
-    def __init__(self, screen, start_y):
+    def __init__(self, screen, start_y, spread_start, spread_finish, channel_size):
         electron_list.append(self)
         self.screen = screen
+        self.start_y = start_y
         self.pos_y = start_y
         self.pos_x = -20
         w, h = self.screen.get_size()
@@ -63,6 +65,10 @@ class Electron:
         self.target_x = w + 20
         self.target_y = self.pos_y
         self.speed = 8
+        self.spread_start = spread_start
+        self.spread_finish = spread_finish
+        self.channel_size = channel_size
+        self.stage = 0
 
     def draw(self):
         self.screen.blit(neg, (self.pos_x, self.pos_y))
@@ -70,6 +76,12 @@ class Electron:
     def update(self):
         if self.pos_x > self.max_x + 20:
             self.remove()
+
+        if self.pos_x > self.spread_start and self.stage is 0:
+            self.target_y = self.pos_y + random.randint(0, int(self.channel_size))
+            self.stage = 1
+        if self.pos_x > self.spread_finish:
+            self.target_y = self.start_y
 
         if self.pos_x > (self.target_x + self.speed - 1):
             self.pos_x -= self.speed
@@ -109,10 +121,12 @@ def frame_run():
     terminal_x = (screen_x-well_width)/2 + terminal_width/2
     terminal_y = well_y - well_height/2 + terminal_height/2
 
-    wire_width = terminal_x - (terminal_width/2)
+    terminal_start = terminal_x - (terminal_width / 2)
     wire_height = terminal_height / 4
 
-    wire_y = (terminal_y - terminal_height/2) + wire_height
+    terminal_end = terminal_start + terminal_width
+
+    wire_y = (terminal_y - terminal_height/2) + 8
 
     rect = Rectangle(screen, well_width, well_height, screen_x/2, well_y, RED)
     rect2 = RectangleAbove(rect, metal_width, 25, BLACK)
@@ -121,8 +135,8 @@ def frame_run():
     rect4 = Rectangle(screen, terminal_width, terminal_height, terminal_x, terminal_y, BLUE)
     rect5 = Rectangle(screen, terminal_width, terminal_height, screen_x-terminal_x, terminal_y, BLUE)
 
-    rect_wire_left = Rectangle(screen, wire_width, wire_height, wire_width/2, wire_y, BLACK)
-    rect_wire_right = Rectangle(screen, wire_width, wire_height, screen_x-wire_width/2, wire_y, BLACK)
+    rect_wire_left = Rectangle(screen, terminal_start, wire_height, terminal_start / 2, wire_y, BLACK)
+    rect_wire_right = Rectangle(screen, terminal_start, wire_height, screen_x - terminal_start / 2, wire_y, BLACK)
 
     last_generated_time = time.clock()
 
@@ -143,7 +157,7 @@ def frame_run():
         current = local_input.max_idsat.get_hybrid() * 100
         if time.clock() - last_generated_time > 50*(1/current):
             last_generated_time = time.clock()
-            Electron(screen, wire_y-8)
+            Electron(screen, wire_y-8, terminal_start, screen_x-terminal_end, terminal_height - 16)
 
         rect2.update()
         rect2.draw()
@@ -162,7 +176,6 @@ def frame_run():
 
         pygame.display.flip()
         clock.tick_busy_loop(40)
-
 
     pygame.quit()
 
