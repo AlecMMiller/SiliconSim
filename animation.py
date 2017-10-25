@@ -17,6 +17,8 @@ screen_y = 500
 neg = pygame.image.load('Icons/neg.png')
 pos = pygame.image.load('Icons/neg.png')
 
+voltageFactor = 0
+
 
 class Rectangle(pygame.Rect):
     def __init__(self, screen, width, height, pos_x, pos_y, color):
@@ -48,6 +50,77 @@ class RectangleAbove(Rectangle):
     def update(self):
         y_offset = self.rect_below.centery - (self.rect_below.height/2) - self.height/2
         self.set_pos_y(y_offset)
+
+
+def text_objects(text, font):
+    text_surface = font.render(text, True, BLACK)
+    return text_surface, text_surface.get_rect()
+
+
+class TextObject:
+    def __init__(self, screen, pos_x, pos_y, text):
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.screen = screen
+        self.font = pygame.font.Font('freesansbold.ttf', 30)
+        self.text_surf, self.text_rect = text_objects(text, self.font)
+        self.text_rect.center = (self.pos_x, self.pos_y)
+
+    def draw(self):
+        self.screen.blit(self.text_surf, self.text_rect)
+
+    def set_text(self, text):
+        self.text_surf, self.text_rect = text_objects(text, self.font)
+        self.text_rect.center = (self.pos_x, self.pos_y)
+
+
+class Button(Rectangle):
+    def __init__(self, screen, width, height, pos_x, pos_y, color, text):
+        Rectangle.__init__(self, screen, width, height, pos_x, pos_y, color)
+        large_text = pygame.font.Font('freesansbold.ttf', 30)
+        self.text_surf, self.text_rect = text_objects(text, large_text)
+        self.text_rect.center = (pos_x, pos_y)
+        self.debounce = False
+
+    def draw(self):
+        Rectangle.draw(self)
+        self.screen.blit(self.text_surf, self.text_rect)
+
+    def action(self):
+        print("Unset action command called")
+
+    def update(self):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+
+        if click[0]:
+            if self.centerx + self.width/2 > mouse[0] > self.centerx - self.width/2 \
+                    and self.centery + self.height/2 > mouse[1] > self.centery - self.height/2:
+                if self.debounce is False:
+                    self.action()
+                    self.debounce = True
+        else:
+            self.debounce = False
+
+
+class IncreaseButton(Button):
+    def __init__(self, screen, width, height, pos_x, pos_y):
+        Button.__init__(self, screen, width, height, pos_x, pos_y, GREEN, "+")
+
+    def action(self):
+        global voltageFactor
+        if voltageFactor < 1:
+            voltageFactor += 0.05
+
+
+class DecreaseButton(Button):
+    def __init__(self, screen, width, height, pos_x, pos_y):
+        Button.__init__(self, screen, width, height, pos_x, pos_y, RED, "-")
+
+    def action(self):
+        global voltageFactor
+        if voltageFactor > 0:
+            voltageFactor -= 0.05
 
 
 electron_list = []
@@ -128,6 +201,12 @@ def frame_run():
 
     wire_y = (terminal_y - terminal_height/2) + 8
 
+    button_width = 50
+    button_height = button_width / 2
+
+    button_x = button_width
+    button_center = button_height * 2
+
     rect = Rectangle(screen, well_width, well_height, screen_x/2, well_y, RED)
     rect2 = RectangleAbove(rect, metal_width, 25, BLACK)
     rect3 = RectangleAbove(rect2, metal_width, 50, GREEN)
@@ -137,6 +216,11 @@ def frame_run():
 
     rect_wire_left = Rectangle(screen, terminal_start, wire_height, terminal_start / 2, wire_y, BLACK)
     rect_wire_right = Rectangle(screen, terminal_start, wire_height, screen_x - terminal_start / 2, wire_y, BLACK)
+
+    increase_button = IncreaseButton(screen, button_width, button_height, button_x, button_center - button_height * 2/3)
+    decrease_button = DecreaseButton(screen, button_width, button_height, button_x, button_center + button_height * 2/3)
+
+    voltage_text = TextObject(screen, button_x + button_width * 3/2, button_center, "test")
 
     last_generated_time = time.clock()
 
@@ -154,10 +238,19 @@ def frame_run():
         ox_thickness = int(4*local_input.ox_thick.get_input())
         rect2.set_thickness(ox_thickness)
 
-        current = local_input.max_idsat.get_hybrid() * 100
-        if time.clock() - last_generated_time > 50*(1/current):
+        ref_voltage = input_screen.supply_voltage.get_hybrid()
+        thresh = input_screen.thresh.get_hybrid()
+        voltage = voltageFactor * ref_voltage
+        voltage_text.set_text(str(round(voltage, 2)) + "V")
+        if voltage <= thresh:
+            on_proportion = 0
+        else:
+            on_proportion = (voltage - thresh) / (ref_voltage - thresh)
+
+        current = local_input.max_idsat.get_hybrid() * 100 * on_proportion
+        if time.clock() - last_generated_time > 50*(1/(current+0.00001)):
             last_generated_time = time.clock()
-            Electron(screen, wire_y-8, terminal_start, screen_x-terminal_end, terminal_height - 16)
+            Electron(screen, wire_y-8, terminal_start, screen_x-terminal_end, (terminal_height - 16) * on_proportion)
 
         rect2.update()
         rect2.draw()
@@ -170,6 +263,13 @@ def frame_run():
 
         rect_wire_left.draw()
         rect_wire_right.draw()
+
+        increase_button.update()
+        increase_button.draw()
+        decrease_button.update()
+        decrease_button.draw()
+
+        voltage_text.draw()
 
         for electron in electron_list:
             electron.update()
@@ -197,6 +297,5 @@ def start():
 
 
 def stop():
-    global running
-    running = False
+    interlock.running = False
 
