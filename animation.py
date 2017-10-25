@@ -9,13 +9,14 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
 GREEN = (0, 255, 0)
+YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
 
 screen_x = 800
 screen_y = 500
 
 neg = pygame.image.load('Icons/neg.png')
-pos = pygame.image.load('Icons/neg.png')
+pos = pygame.image.load('Icons/pos.png')
 
 voltageFactor = 0
 
@@ -50,6 +51,28 @@ class RectangleAbove(Rectangle):
     def update(self):
         y_offset = self.rect_below.centery - (self.rect_below.height/2) - self.height/2
         self.set_pos_y(y_offset)
+
+
+class DepletionLayer(Rectangle):
+    def __init__(self, well, padding, orientation, color):
+        self.padding = padding
+        self.ref_well = well
+        self.ref_height = self.ref_well.height
+        self.height = self.ref_well.height + padding
+        self.width = self.ref_well.width + padding
+        self.centerx = self.ref_well.centerx + (padding * orientation / 2)
+        self.ref_center_y = self.ref_well.centery + padding/2
+        self.centery = self.ref_center_y
+        self.screen = self.ref_well.screen
+        self.channel_proportion = 1
+        self.color = color
+
+    def update(self):
+        self.height = self.ref_height * self.channel_proportion + self.padding
+        self.centery = self.ref_center_y + (self.ref_height * (1 - self.channel_proportion)) / 2
+
+    def set_channel(self, channel):
+        self.channel_proportion = 1 - channel
 
 
 def text_objects(text, font):
@@ -124,6 +147,63 @@ class DecreaseButton(Button):
 
 
 electron_list = []
+hole_list = []
+animated_hole_list = []
+
+
+class StaticHole:
+    def __init__(self, screen, x, y):
+        self.pos_x = x
+        self.pos_y = y
+        self.screen = screen
+        hole_list.append(self)
+
+    def update(self):
+        self.screen.blit(pos, (self.pos_x, self.pos_y))
+
+
+class AnimatedHole:
+    def __init__(self, screen, x, y, minimum, maximum):
+        animated_hole_list.append(self)
+        self.screen = screen
+        self.pos_x = x
+        self.pos_y = y
+        self.factor = 1 - y / maximum
+        self.minimum = minimum
+        self.maximum = maximum
+        self.channel = 1
+
+    def update(self):
+        full = self.maximum - self.channel * (self.maximum - self.minimum)
+        self.pos_y = self.maximum - full * self.factor
+        self.screen.blit(pos, (self.pos_x, self.pos_y))
+
+    def set_channel(self, channel):
+        self.channel = channel
+
+
+def create_static_holes(screen, number, min_x, max_x, min_y, max_y):
+    for i in range(0, number):
+        offset = 16
+        x_top = int(max_x - offset)
+        x_bot = int(min_x)
+        y_top = int(max_y - offset)
+        y_bot = int(min_y)
+        x_pos = random.randint(x_bot, x_top)
+        y_pos = random.randint(y_bot, y_top)
+        StaticHole(screen, x_pos, y_pos)
+
+
+def create_animated_holes(screen, number, min_x, max_x, min_y, max_y):
+    for i in range(0, number):
+        offset = 16
+        x_top = int(max_x - offset)
+        x_bot = int(min_x)
+        y_top = int(max_y - offset)
+        y_bot = int(min_y)
+        x_pos = random.randint(x_bot, x_top)
+        y_pos = random.randint(y_bot, y_top)
+        AnimatedHole(screen, x_pos, y_pos, min_y, max_y)
 
 
 class Electron:
@@ -207,12 +287,16 @@ def frame_run():
     button_x = button_width
     button_center = button_height * 2
 
-    rect = Rectangle(screen, well_width, well_height, screen_x/2, well_y, RED)
-    rect2 = RectangleAbove(rect, metal_width, 25, BLACK)
-    rect3 = RectangleAbove(rect2, metal_width, 50, GREEN)
+    padding = 10
 
-    rect4 = Rectangle(screen, terminal_width, terminal_height, terminal_x, terminal_y, BLUE)
-    rect5 = Rectangle(screen, terminal_width, terminal_height, screen_x-terminal_x, terminal_y, BLUE)
+    num_holes = 15
+
+    rect = Rectangle(screen, well_width, well_height, screen_x/2, well_y, RED)
+    oxide_rect = RectangleAbove(rect, metal_width, 25, BLACK)
+    gate_rect = RectangleAbove(oxide_rect, metal_width, 50, GREEN)
+
+    left_terminal = Rectangle(screen, terminal_width, terminal_height, terminal_x, terminal_y, BLUE)
+    right_terminal = Rectangle(screen, terminal_width, terminal_height, screen_x-terminal_x, terminal_y, BLUE)
 
     rect_wire_left = Rectangle(screen, terminal_start, wire_height, terminal_start / 2, wire_y, BLACK)
     rect_wire_right = Rectangle(screen, terminal_start, wire_height, screen_x - terminal_start / 2, wire_y, BLACK)
@@ -221,6 +305,21 @@ def frame_run():
     decrease_button = DecreaseButton(screen, button_width, button_height, button_x, button_center + button_height * 2/3)
 
     voltage_text = TextObject(screen, button_x + button_width * 3/2, button_center, "test")
+
+    left_depletion = DepletionLayer(left_terminal, padding, 1, YELLOW)
+    right_depletion = DepletionLayer(right_terminal, padding, -1, YELLOW)
+
+    create_static_holes(screen, num_holes,
+                        terminal_x - terminal_width/2, terminal_x + terminal_width/2 + padding,
+                        terminal_y + terminal_height/2 + padding, well_y + (well_height / 2))
+
+    create_static_holes(screen, num_holes,
+                        screen_x - terminal_x - terminal_width / 2, screen_x - terminal_x + terminal_width / 2 - padding,
+                        terminal_y + terminal_height / 2 + padding, well_y + (well_height / 2))
+
+    create_animated_holes(screen, num_holes,
+                          terminal_x + terminal_width / 2 + padding, screen_x - terminal_x - terminal_width / 2,
+                          well_y - (well_height / 2), well_y + (well_height / 2))
 
     last_generated_time = time.clock()
 
@@ -234,9 +333,10 @@ def frame_run():
         screen.fill(WHITE)
         with interlock.thread_lock:
             local_input = input_screen
+
         rect.draw()
         ox_thickness = int(4*local_input.ox_thick.get_input())
-        rect2.set_thickness(ox_thickness)
+        oxide_rect.set_thickness(ox_thickness)
 
         ref_voltage = input_screen.supply_voltage.get_hybrid()
         thresh = input_screen.thresh.get_hybrid()
@@ -247,19 +347,26 @@ def frame_run():
         else:
             on_proportion = (voltage - thresh) / (ref_voltage - thresh)
 
+        left_depletion.set_channel(on_proportion)
+        right_depletion.set_channel(on_proportion)
         current = local_input.max_idsat.get_hybrid() * 100 * on_proportion
         if time.clock() - last_generated_time > 50*(1/(current+0.00001)):
             last_generated_time = time.clock()
             Electron(screen, wire_y-8, terminal_start, screen_x-terminal_end, (terminal_height - 16) * on_proportion)
 
-        rect2.update()
-        rect2.draw()
+        oxide_rect.update()
+        oxide_rect.draw()
 
-        rect3.update()
-        rect3.draw()
+        gate_rect.update()
+        gate_rect.draw()
 
-        rect4.draw()
-        rect5.draw()
+        left_depletion.update()
+        left_depletion.draw()
+        right_depletion.update()
+        right_depletion.draw()
+
+        left_terminal.draw()
+        right_terminal.draw()
 
         rect_wire_left.draw()
         rect_wire_right.draw()
@@ -273,6 +380,13 @@ def frame_run():
 
         for electron in electron_list:
             electron.update()
+
+        for hole in hole_list:
+            hole.update()
+
+        for hole in animated_hole_list:
+            hole.set_channel(on_proportion)
+            hole.update()
 
         pygame.display.flip()
         clock.tick_busy_loop(40)
