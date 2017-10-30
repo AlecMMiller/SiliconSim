@@ -284,8 +284,8 @@ def frame_run():
     button_width = 50
     button_height = button_width / 2
 
-    button_x = button_width
-    button_center = button_height * 2
+    button_x = screen_x - terminal_start
+    button_center = terminal_y - terminal_height
 
     padding = 10
 
@@ -300,11 +300,13 @@ def frame_run():
 
     rect_wire_left = Rectangle(screen, terminal_start, wire_height, terminal_start / 2, wire_y, BLACK)
     rect_wire_right = Rectangle(screen, terminal_start, wire_height, screen_x - terminal_start / 2, wire_y, BLACK)
+    rect_wire_top = Rectangle(screen, wire_height, screen_y/3, screen_x/2, screen_y / 3, BLACK)
 
     increase_button = IncreaseButton(screen, button_width, button_height, button_x, button_center - button_height * 2/3)
     decrease_button = DecreaseButton(screen, button_width, button_height, button_x, button_center + button_height * 2/3)
 
     voltage_text = TextObject(screen, button_x + button_width * 3/2, button_center, "test")
+    ref_voltage_text = TextObject(screen, screen_x/2, screen_y / 6 - 20, "test")
 
     left_depletion = DepletionLayer(left_terminal, padding, 1, YELLOW)
     right_depletion = DepletionLayer(right_terminal, padding, -1, YELLOW)
@@ -339,6 +341,7 @@ def frame_run():
         oxide_rect.set_thickness(ox_thickness)
 
         ref_voltage = input_screen.supply_voltage.get_hybrid()
+        ref_voltage_text.set_text(str(round(ref_voltage, 2)) + "V")
         thresh = input_screen.thresh.get_hybrid()
         voltage = voltageFactor * ref_voltage
         voltage_text.set_text(str(round(voltage, 2)) + "V")
@@ -353,6 +356,8 @@ def frame_run():
         if time.clock() - last_generated_time > 50*(1/(current+0.00001)):
             last_generated_time = time.clock()
             Electron(screen, wire_y-8, terminal_start, screen_x-terminal_end, (terminal_height - 16) * on_proportion)
+
+        rect_wire_top.draw()
 
         oxide_rect.update()
         oxide_rect.draw()
@@ -377,6 +382,7 @@ def frame_run():
         decrease_button.draw()
 
         voltage_text.draw()
+        ref_voltage_text.draw()
 
         for electron in electron_list:
             electron.update()
